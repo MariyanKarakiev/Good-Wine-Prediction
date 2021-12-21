@@ -24,7 +24,6 @@ n_train = train_data.shape[0]
 
 numeric_features = all_features.dtypes[all_features.dtypes != 'object'].index
 
-
 all_features[numeric_features] = all_features[numeric_features].apply(
     lambda x: (x - x.mean()) / (x.std()))
 
@@ -70,7 +69,7 @@ def train(net, train_features, train_labels,
   train_tensor = torch.utils.data.TensorDataset(train_features, 
                                                 train_labels)
   train_loader = torch.utils.data.DataLoader(train_tensor,
-                                             batch_size=batch_size, shuffle=True)
+                                             batch_size=batch_size, shuffle=False)
 
   # Use Adam optimization algorithm
   optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate,
@@ -79,10 +78,11 @@ def train(net, train_features, train_labels,
   for epoch in range(num_epochs):
     for X, y in train_loader:
       output = net(X)
-      optimizer.zero_grad()
-      l = loss(output, y)    
+      l = loss(output, y)
+      l.requires_grad_(True)
       l.backward()
-      optimizer.step()    
+      optimizer.step()
+      optimizer.zero_grad()
     train_ls.append(l)
     if(epoch%10==0):
       print('epoch {}, loss {}'.format(epoch, l.item()))
@@ -107,16 +107,15 @@ def train_and_pred(train_features, test_feature, train_labels, test_data,
                  num_epochs, learning_rate,
                  weight_decay, batch_size)
     
-   
+  
 
     print(f'train loss {float(train_ls[-1]):f}')
     # Apply the network to the test set
     preds = net(test_features).detach().numpy()
 
     # Reformat it to export to Kaggle
-    result = test_data 
-    result['quality'] = pd.Series(preds.reshape(1, -1)[0])
-    submission = result['quality']
+    test_data['quality'] = pd.Series(preds.reshape(1, -1)[0])
+    submission = test_data['quality']
     submission.to_csv('submission.csv', index=False)
     
     
